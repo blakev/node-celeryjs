@@ -8,7 +8,7 @@ Usage:
 var celery = require('node-celeryjs');
 
 var client = new celery.createClient({
-	BROKER_URL: 'amqp://celery:celery@lab-cel02.ndlab.local/celery',
+	BROKER_URL: 'amqp://celery:celery@lab-cel02',
 	DEFAULT_QUEUE: 'default'
 });
 
