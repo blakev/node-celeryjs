@@ -13,6 +13,15 @@
 		"type": "git",
 		"url": "git@github.com:blakev/node-celeryjs.git"
 	},
+	"bugs" : {
+        "url" : "https://github.com/blakev/node-celeryjs/issues"
+    },
+    "licenses" : [
+        {
+            "type" : "GPLv2",
+            "url" : "https://github.com/blakev/node-celeryjs/blob/master/LICENSE"
+        }
+    ],
 	"engine": "node > 0.10",
 	"main": "celery.js"
 }

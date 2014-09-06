@@ -284,7 +284,3 @@ exports.createClient = function(config, callback) {
 
 	return new Client(config, callback);
 }
-
-exports.defaults = {
-
-}
