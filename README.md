@@ -1,9 +1,7 @@
 node-celeryjs
 =============
 
-A node.js Celery client with callbacks and promises.
-
-*This project is nowhere near down, and thus no guarantees can be made.*
+A node.js Celery client utilizing callbacks and promises.
 
 Usage:
 ```
@@ -25,8 +23,17 @@ client.on('connect', function() {
 		.done()
 	});
 });
-
 ```
+
+Returns:
+```
+{ status: 'SUCCESS',
+  traceback: null,
+  result: 'linux posix',
+  task_id: 'c141e770-182a-4fc8-af2e-9fd8e2692410',
+  children: [] }
+```
+
 
 One less callback:
 ```
@@ -42,3 +49,7 @@ function successful(message) {
 ```
 
 Attribution to: [https://github.com/mher/node-celery](https://github.com/mher/node-celery) by Mher Movsisyan for the inspiration and design pattern. Use the one that suits your programming flow better!
+
+*This project is nowhere near down, and thus no guarantees can be made.*
+
+Blake VandeMerwe 2014
