@@ -1,5 +1,6 @@
 var _ = require('underscore'),
     Q = require('q'),
+    async = require('async'),
     uuid = require('node-uuid'),
     util = require('util'),
     events = require('events'),
@@ -8,11 +9,6 @@ var _ = require('underscore'),
 
 var development = true;
 var debug = (process.env.NODE_CELERY_DEBUG || development) ? util.debug : function(){};
-
-var defaultTaskOptions = {
-    args: [],
-    kwargs: {}
-}
 
 function getMessageId() {
     return uuid.v4();
@@ -81,10 +77,10 @@ function Configuration(options) {
     _this.ROUTES = _this.ROUTES || {};
 }
 
-function Result(id, client) {
+function Result(id, task) {
     var _this = this;
         _this.taskId = id;
-        _this.client = client;
+        _this.client = task.client;
         _this.result = null;
 
     _this.promise = Q.defer();
@@ -122,27 +118,28 @@ function Result(id, client) {
     return _this.promise.promise;
 }
 
-function Task(client, name, options, callback) {
+function Task(client, name, options) {
     var _this = this;
         _this.client = client;
         _this.name = name;
         _this.options = options;
 
     var route = _this.client.conf.ROUTES[name],
-        queue = route && route.queue;
+        queue = (route && route.queue) ? route : false;
 
     var prepare = function(options, _this) {
         var options = options || {},
-            brokerOptions = options.brokerOptions || {},
-            taskOptions = options.taskOptions || {};
+            brokerOptions = options.broker || {},
+            taskOptions = options.task || {};
 
         var taskId = getMessageId();
 
         _this.client.broker.publish(
-            _this.options.queue 
-            || options.queue
+            _this.options.queue         // Task Created options.queue
+            || queue                    // Task NAME in DefaultRoutes.queue
+            || options.queue            // Task Called options.queue
             || _this.client.conf.DEFAULT_ROUTING_KEY,
-            createMessage(
+            createMessage(              // Default Routing Key/Queue
                 _this.name,
                 _.extend(
                     _this.options, 
@@ -164,14 +161,61 @@ function Task(client, name, options, callback) {
         return taskId;
     }
 
-    var applyAsync = function(options, callback) {
+    _this.link = options.link || null;
+    _this.linkError = options.linkError || null;
+    _this.notifier = options.notifier || null;
+    _this.priority = options.priority || 6;
+
+    _this.errorCallback = null;
+    _this.linkCallback = null;
+
+
+    // if (_.isArray(_this.linkError)) {
+    //     _this.errorCallback = _.partial(async.series, _this.linkError, callback)
+    // } else
+    // if (_.isFunction(_this.linkError)) {
+    //     _this.errorCallback = _this.linkError;
+    // }
+
+
+    // if (_.isArray(_this.link)) {
+    //     _this.linkCallback = _.partial(async.series, _this.link, _this.errorCallback)
+    // } else
+    // if (_.isFunction(_this.link)) {
+    //     _this.linkCallback = _this.link;
+    // }
+
+    var ret = {};
+
+    ret.applyAsync = function(options) {
         taskId = prepare(options, _this);
-        return new Result(taskId, _this.client);
+        return new Result(taskId, _this);
     }
 
-    return {
-        applyAsync: applyAsync
+    ret.apply = function(options, callback) {
+        if (_.isFunction(options)) {
+            callback = options;
+            options = {};
+        }
+        ret.applyAsync(options).then(callback);
     }
+
+    ret.delayAsync = function(options, ms) {
+        var ms = options.ms || ms || 0;
+        return ret.applyAsync(options).delay(ms);
+    }
+
+    ret.delay = function(options, ms, callback) {
+        ret.delayAsync(options, ms).then(callback);
+    }
+
+    ret.times = function(options, n, callback) {
+        async.times(n, function(n, next) {
+            ret.apply(options, next);
+        }, callback);
+    }
+
+    return ret;
 }
 
 
@@ -180,6 +224,8 @@ function Client(conf, callback) {
         conf = conf || {};
 
     _this.conf = new Configuration(conf);
+    _this.taskList = [];
+
     _this.connection = {
         ready: false,
         broker: false,
@@ -198,24 +244,15 @@ function Client(conf, callback) {
     })
 
     _this.backend = _this.broker;
-    _this.connection.backend = true;
 
-    _this.broker.on('ready', function() {
-        debug('connected to broker');
+    _this.broker.on('ready', function() {       debug('connected to broker');
         _this.connection.broker = true;
-
-        if(_this.connection.backend) {
-            _this.connection.ready = true;
-        
-            if(_this.connection.broker && _this.connection.backend) {
-                if(!_.isUndefined(callback)) {
-                    return callback(null, _this);   
-                } else {
-                    _this.emit('connect');
-                }
-            } else {
-                throw new Error('could not connect to broker / backend');
-            }
+        _this.connection.ready = true;
+    
+        if(!_.isUndefined(callback)) {
+            return callback(null, _this);   
+        } else {
+            _this.emit('connect');
         }
     });
 
@@ -228,52 +265,58 @@ function Client(conf, callback) {
 util.inherits(Client, events.EventEmitter);
 
 Client.prototype.createTask = function(name, options, callback) {
-    var err = null;
+                                            debug('create a new Task ' + name);
+    var _this = this,
+        err = null,
+        tempTask = null;
 
-    if (arguments.length < 1) err = Error('insufficient arguments for Client.createTask');
+    if (arguments.length < 1) 
+        err = Error('insufficient arguments for Client.createTask');
+
     if (arguments.length == 2) {
         if(_.isFunction(options)) {
             callback = options;
             options = {};
-        } else {
-            err = Error('no callback supplied for Client.createTask')
-        }
+        } 
     }
 
     var options = options || {};
 
     if (!err) {
-        var t = new Task(this, name, options);
-        
-        if(callback) {
-            callback(null, t, this);
-        }
+        tempTask = new Task(this, name, options);
+    } 
 
-        return t;
+    if (callback) {
+        callback(err, tempTask)
+    }
+
+    if (tempTask) {
+        _this.taskList.push(tempTask);
+        return tempTask;
+
     } else {
-        if(_.isUndefined(callback) && err) {
-            console.log(err);
-        } else {
-            callback(err, null);    
-        }
-
-        return null;
+        return err;
     }
 }
 
 Client.prototype.end =
-Client.prototype.close = function(callback) {
+Client.prototype.close = function(callback) { debug('disconnecting Client');
+    var _this = this;
+
     try {
-        this.broker.disconnect();
+        _this.broker.disconnect();
+        _this.emit('end');
         callback(null, true);
     } catch(err) {
-        callback('error disconnecting from broker: ' + err, false);
+        var errMsg = 'error disconnecting from broker: ' + err;
+        _this.emit('error', errMsg);
+        callback(errMsg, false);
     }
 }
 
 
 
-exports.createClient = function(config, callback) {
+exports.createClient = function(config, callback) { debug('creating Client');
     if (arguments.length == 0) {
         config = {};
     } else
@@ -282,5 +325,5 @@ exports.createClient = function(config, callback) {
         config = {};
     }
 
-    return new Client(config, callback);
+    return new Client(config, callback);        
 }

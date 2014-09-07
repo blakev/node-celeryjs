@@ -23,5 +23,5 @@
         }
     ],
     "engine": "node > 0.10",
-    "main": "celery.js"
+    "main": "src/celery.js"
 }
