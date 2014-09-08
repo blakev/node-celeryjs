@@ -1,20 +1,22 @@
 {
-    "name": "node-celeryjs",
+    "name": "celeryjs",
     "version": "0.0.1",
     "description": "A node.js Celery client with promises",
     "author": "Blake VandeMerwe <blakev@null.net>",
     "dependencies": {
-        "underscore": "*",
         "amqp": "*",
+        "async": "*",
+        "node-uuid": "*",
         "q": "*",
-        "node-uuid": "*"
+        "underscore": "*"
     },
     "repository": {
         "type": "git",
         "url": "git@github.com:blakev/node-celeryjs.git"
     },
     "bugs" : {
-        "url" : "https://github.com/blakev/node-celeryjs/issues"
+        "url" : "https://github.com/blakev/node-celeryjs/issues",
+        "email": "blakev@null.net"
     },
     "licenses" : [
         {
@@ -22,6 +24,7 @@
             "url" : "https://github.com/blakev/node-celeryjs/blob/master/LICENSE"
         }
     ],
+    "keywords": ["celery", "amqp", "celeryproject", "message queue"],
     "engine": "node > 0.10",
     "main": "src/celery.js"
 }

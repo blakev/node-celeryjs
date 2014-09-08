@@ -6,7 +6,7 @@ A node.js Celery client utilizing callbacks and promises.
 
 Usage:
 ```
-var celery = require('node-celeryjs');
+var celery = require('celeryjs');
 
 var client = new celery.createClient({
 	BROKER_URL: 'amqp://celery:celery@lab-cel02',
