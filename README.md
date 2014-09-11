@@ -1,6 +1,6 @@
 Celery.js
 =============
-[![NPM version](https://badge.fury.io/js/node-celeryjs.svg)](http://badge.fury.io/js/node-celeryjs)
+[![NPM version](https://badge.fury.io/js/celeryjs.svg)](http://badge.fury.io/js/celeryjs)
 
 A node.js Celery client utilizing callbacks and promises.
 
