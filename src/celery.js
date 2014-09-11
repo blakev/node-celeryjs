@@ -369,3 +369,12 @@ exports.createClient = function(config, callback) { debug('creating Client');
 
     return new Client(config, callback);        
 }
+
+exports.utils = {
+    getMessageId: getMessageId,
+    formatDate: formatDate,
+    upperFirst: upperFirst,
+    lowerFirst: lowerFirst,
+    toCamelCase: toCamelCase,
+    fixUnderscoreAttributes: fixUnderscoreAttributes
+}

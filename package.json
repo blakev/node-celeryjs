@@ -1,6 +1,6 @@
 {
     "name": "celeryjs",
-    "version": "0.0.2a",
+    "version": "0.0.2b",
     "description": "A node.js Celery client with promises",
     "author": "Blake VandeMerwe <blakev@null.net>",
     "dependencies": {
@@ -9,6 +9,12 @@
         "node-uuid": "*",
         "q": "*",
         "underscore": "*"
+    },
+    "devDependencies": {
+        "mocha": "*"
+    },
+    "scripts": {
+        "test": "mocha test/test*.js"
     },
     "repository": {
         "type": "git",

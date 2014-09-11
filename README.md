@@ -29,7 +29,7 @@ Returns:
 { status: 'SUCCESS',
   traceback: null,
   result: 'linux posix',
-  task_id: 'c141e770-182a-4fc8-af2e-9fd8e2692410',
+  taskId: 'c141e770-182a-4fc8-af2e-9fd8e2692410',
   children: [] }
 ```
 
@@ -80,6 +80,9 @@ var options = {
 
 ###Configuration
 ####*supplied to createClient's `conf` parameter*
+- debug, default: `true`
+- camelCaseResults, default: `true`
+	- converts python-based response into javascript-style attributes.
 - BROKER_URL, default: `'amqp://'`
 - DEFAULT_EXCHANGE, default: `''`
 - DEFAULT_EXCHANGE_TYPE, default: `'topic'`
@@ -131,7 +134,7 @@ Both return:
 { status: 'SUCCESS',
   traceback: null,
   result: 'windows nt 2.7',
-  task_id: '40a68e93-aedc-4cc2-b15c-be2ecdec82f8',
+  taskId: '40a68e93-aedc-4cc2-b15c-be2ecdec82f8',
   children: [] }
 ```
 
