@@ -201,7 +201,7 @@ function Task(client, name, options) {
             callback = options;
             options = {};
         }
-        ret.applyAsync(options).then(callback);
+        ret.applyAsync(options).then(callback).fail(callback);
     }
 
     ret.delayAsync = function(options, ms) {
@@ -215,7 +215,7 @@ function Task(client, name, options) {
             ms = options;
             options = {};
         }
-        ret.delayAsync(options, ms).then(callback);
+        ret.delayAsync(options, ms).then(callback).fail(callback);
     }
 
     ret.times = function(options, n, callback) {
