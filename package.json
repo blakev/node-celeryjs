@@ -1,6 +1,6 @@
 {
     "name": "celeryjs",
-    "version": "0.0.2",
+    "version": "0.0.1",
     "description": "A node.js Celery client with promises",
     "author": "Blake VandeMerwe <blakev@null.net>",
     "dependencies": {

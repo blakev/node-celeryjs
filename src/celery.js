@@ -188,10 +188,6 @@ function Task(client, name, options) {
     var ret = {};
 
     ret.applyAsync = function(options) {
-        if (!options) {
-            options = {};
-        }
-
         taskId = prepare(options, _this);
         return new Result(taskId, _this);
     }
@@ -210,11 +206,6 @@ function Task(client, name, options) {
     }
 
     ret.delay = function(options, ms, callback) {
-        if (_.isNumber(options)) {
-            callback = ms;
-            ms = options;
-            options = {};
-        }
         ret.delayAsync(options, ms).then(callback);
     }
 
@@ -311,10 +302,6 @@ Client.prototype.createTask = function(name, options, callback) {
 Client.prototype.end =
 Client.prototype.close = function(callback) { debug('disconnecting Client');
     var _this = this;
-
-    if (!callback) {
-        callback = function() { };
-    }
 
     try {
         _this.broker.disconnect();
