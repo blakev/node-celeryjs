@@ -18,6 +18,31 @@ function formatDate(date) {
     return new Date(date).toISOString().slice(0, -1);
 }
 
+function upperFirst(string) {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
+function lowerFirst(string) {
+    return string.charAt(0).toLowerCase() + string.slice(1);
+}
+
+function toCamelCase(attrib) {
+    var parts = attrib.split('_');
+    return lowerFirst(_.first(parts)) + _.map(_.rest(parts), upperFirst).join('');
+}
+
+function fixUnderscoreAttributes(message) {
+    var ret = {};
+
+    for (var item in message) {
+        if (message.hasOwnProperty(item)) {
+            ret[toCamelCase(item)] = message[item]
+        }
+    }
+
+    return ret;
+}
+
 function createMessage(task, options, eid) {
     var fields = [
         'task', 'id', 'args', 
@@ -65,6 +90,8 @@ function Configuration(options) {
     }
 
     _this.debug = _this.debug || true;
+    _this.camelCaseResults = _this.camelCaseResults || true;
+
 
     _this.BROKER_URL = _this.BROKER_URL || 'amqp://';
     _this.DEFAULT_EXCHANGE = _this.DEFAULT_EXCHANGE || '';
@@ -94,6 +121,8 @@ function Result(id, task) {
             durable: _this.client.conf.TASK_RESULT_DURABLE
         },
         function(q) {
+            var fixMessage = _this.client.conf.camelCaseResults ? fixUnderscoreAttributes : function(x){return x;};
+
             q.bind(_this.client.conf.RESULT_EXCHANGE, '#');
             q.subscribe(function (message, headers, deliveryInfo, messageObject) {
                 if (message.contentType === 'application/x-python-serialize') {
@@ -104,12 +133,12 @@ function Result(id, task) {
                 _this.result = message
 
                 if (message.status === 'SUCCESS') {
-                    _this.promise.resolve(message);
+                    _this.promise.resolve(fixMessage(message));
                 } else
                 if (message.status === 'FAILURE') {
-                    _this.promise.reject(message);
+                    _this.promise.reject(fixMessage(message));
                 } else {
-                    _this.promise.notify(message);
+                    _this.promise.notify(fixMessage(message));
                 }
             })
         }
