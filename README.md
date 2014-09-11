@@ -5,7 +5,7 @@ Celery.js
 A node.js Celery client utilizing callbacks and promises.
 
 Usage:
-```
+```javascript
 var celery = require('celeryjs');
 
 var client = new celery.createClient({
@@ -13,31 +13,6 @@ var client = new celery.createClient({
 	DEFAULT_QUEUE: 'default'
 });
 
-client.on('connect', function() {
-	client.createTask('native.platform', function(err, task) {
-		task.applyAsync()
-		.then(
-			function(resp) {
-				console.log(resp);
-			}
-		)
-		.done()
-	});
-});
-```
-
-Returns:
-```
-{ status: 'SUCCESS',
-  traceback: null,
-  result: 'linux posix',
-  task_id: 'c141e770-182a-4fc8-af2e-9fd8e2692410',
-  children: [] }
-```
-
-
-One less callback:
-```
 client.on('connect', function() {
 	var task = client.createTask('native.platform');
 
@@ -49,8 +24,81 @@ function successful(message) {
 }
 ```
 
-Attribution to: [https://github.com/mher/node-celery](https://github.com/mher/node-celery) by Mher Movsisyan for the inspiration and design pattern. Use the one that suits your programming flow better!
+Returns:
+```javascript
+{ status: 'SUCCESS',
+  traceback: null,
+  result: 'linux posix',
+  task_id: 'c141e770-182a-4fc8-af2e-9fd8e2692410',
+  children: [] }
+```
 
-*This project is nowhere near down, and thus no guarantees can be made.*
+##API
+
+###require('celeryjs')
+####.createClient(conf, [callback])
+Emits:
+- `connect`
+- `error` 
+- and `end`, all mirroring the underlying amqp connection.
+
+###Client
+####.createTask(name, [options,] [callback])
+
+####.close([callback]) *alias: end*
+
+###Task
+####.applyAsync([options])
+Execute the task, returns a `Promise`.
+
+####.apply([options,] callback)
+Execute the task with `callback`.
+
+####.delayAsync([options,] ms)
+Execute the task with `ms` delay, returns a `Promise`.
+
+####.delay([options,] ms, callback)
+Executes the task with `callback` using `ms` delay.
+
+####.times([options,] n, callback)
+Executes the task `n` times with `callback`.
+
+Task-level Queue
+```Javascript
+var task = client.createTask('native.platform', {queue: 'windows'});
+```
+
+Execute-level Queue
+```Javascript
+var task = client.createTask('native.platform');
+task.applyAsync(task: {queue: 'windows'});
+```
+
+Both return:
+```javascript
+{ status: 'SUCCESS',
+  traceback: null,
+  result: 'windows nt 2.7',
+  task_id: '40a68e93-aedc-4cc2-b15c-be2ecdec82f8',
+  children: [] }
+```
+
+###Result
+A JSON message from amqp containing:
+- `status`
+- `traceback`
+- `result`
+- `task_id`
+- `children`
+
+
+
+
+
+
+===
+> Attribution to: [https://github.com/mher/node-celery](https://github.com/mher/node-celery) by Mher Movsisyan for the inspiration and design pattern.
+> 
+> Use the one that suits your programming flow better!
 
 Blake VandeMerwe 2014
