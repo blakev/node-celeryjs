@@ -44,8 +44,51 @@ Emits:
 
 ###Client
 ####.createTask(name, [options,] [callback])
+#####options
+- `task`
+	- These are overwritten by supplying the same attributes to Task-level options
+	- defaults
+		- `task`: Supplied task name when created.
+		- `id`: Generated uuid used internally.
+		- `args`: `[]`
+		- `kwargs`: `{}`
+	- optional
+		- `task`, `id`, `args`, `kwargs`, `retires`, 
+		- `eta`, `expires`, `queue`, `taskset`, `chord`, 
+		- `utc`, `callbacks`, `errbacks`, `timeouts`
+- `broker`
+	- amqp exchange.publish options, see [here](https://github.com/postwait/node-amqp#exchangepublishroutingkey-message-options-callback).
+	- `contentType`, default: `'application/json'` **required**
+	- `contentEncoding`, default: `'utf-8'`
+
+Example:
+```javascript
+var options = {
+	queue: 'windows'
+	task: {
+		args: [1,2,3],
+		kwargs: {verbose: true}
+	},
+	broker: {
+		appId: 'TestApp'
+	}
+}
+```
 
 ####.close([callback]) *alias: end*
+
+
+###Configuration
+####*supplied to createClient's `conf` parameter*
+- BROKER_URL, default: `'amqp://'`
+- DEFAULT_EXCHANGE, default: `''`
+- DEFAULT_EXCHANGE_TYPE, default: `'topic'`
+- DEFAULT_QUEUE, default: `'default'`
+- DEFAULT_ROUTING_KEY, default: `'default'`
+- RESULT_EXCHANGE, default: `'celeryresults'`
+- TASK_RESULT_DURABLE, default: `true`
+- TASK_RESULT_EXPIRES, default: `30 * 60 * 1000 // 30 minutes`
+- ROUTES, default: `{}`
 
 ###Task
 ####.applyAsync([options])
@@ -63,6 +106,15 @@ Executes the task with `callback` using `ms` delay.
 ####.times([options,] n, callback)
 Executes the task `n` times with `callback`.
 
+###Result
+A JSON message from amqp containing:
+- `status`
+- `traceback`
+- `result`
+- `task_id`
+- `children`
+
+##Usage
 Task-level Queue
 ```Javascript
 var task = client.createTask('native.platform', {queue: 'windows'});
@@ -83,20 +135,8 @@ Both return:
   children: [] }
 ```
 
-###Result
-A JSON message from amqp containing:
-- `status`
-- `traceback`
-- `result`
-- `task_id`
-- `children`
 
-
-
-
-
-
-===
+###Note
 > Attribution to: [https://github.com/mher/node-celery](https://github.com/mher/node-celery) by Mher Movsisyan for the inspiration and design pattern.
 > 
 > Use the one that suits your programming flow better!
