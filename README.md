@@ -53,9 +53,9 @@ Emits:
 		- `args`: `[]`
 		- `kwargs`: `{}`
 	- optional
-		- `task`, `id`, `args`, `kwargs`, `retires`, 
-		- `eta`, `expires`, `queue`, `taskset`, `chord`, 
-		- `utc`, `callbacks`, `errbacks`, `timeouts`
+		- 'args', 'callbacks', 'chord', 
+    	- 'errbacks', 'eta', 'expires', 'id', 'kwargs', 
+    	- 'queue', 'retries', 'task', 'taskset', 'timeouts', 'utc'
 - `broker`
 	- amqp exchange.publish options, see [here](https://github.com/postwait/node-amqp#exchangepublishroutingkey-message-options-callback).
 	- `contentType`, default: `'application/json'` **required**
@@ -109,13 +109,65 @@ Executes the task with `callback` using `ms` delay.
 ####.times([options,] n, callback)
 Executes the task `n` times with `callback`.
 
+####.link(task) 
+Pushes a `task alias`, or Array of task aliases, onto the Canvas stack.
+
+If no `task` is supplied, the underlying Cavas will act as a single `task.apply()`
+
+####.s([options])
+Creates an alias of `task` to use with `.link`
+
+A `task alias` is a shallow copy of a task where the supplied options overwrite those in the original task.
+
+If you don't have any options to change, just call `task.s()` and it will be identical.
+
+###.Canvas
+####.chain(callback)
+Calls the linked task aliases where the result of the previous function is the last parameters for the next function.
+
+Given:
+```python
+@app.task(name='js.add')
+def add(x, y):
+    return x + y
+```
+
+```javascript
+client.on('connect', function() {
+	var task = client.createTask('js.add', {queue: 'js', args: [1,2]});
+
+	task
+	.link([
+		task.s({args: [1]}),
+		task.s({args: [5]})
+	])
+	.Canvas
+	.chain(successful);	// 1 + 2 = 3
+});						// 3 + 1 = 4
+						// 4 + 5 = 9
+
+
+function successful(message) {
+	console.log(message);
+}
+```
+
+Returns:
+```javascript
+{ status: 'SUCCESS',
+  traceback: null,
+  result: 9,
+  taskId: '8925043b-462f-470b-87eb-d7384e1f299d',
+  children: [] }
+```
+
 ###Result
 A JSON message from amqp containing:
-- `status`
-- `traceback`
-- `result`
-- `task_id`
-- `children`
+- `status`:		SUCCESS or FAILURE, PENDING possible with promises.
+- `traceback`:	Python stack-trace if there was an error.
+- `result`:		Return value of the python program.
+- `taskId`:		Internal task ID, and the same one in the message queue.
+- `children`:	*soon* -- these are sub-tasks spawned from the original task; will be in Canvas.
 
 ##Usage
 Task-level Queue
