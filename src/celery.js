@@ -44,13 +44,10 @@ function fixUnderscoreAttributes(message) {
 }
 
 function createMessage(task, options, eid) {
-    var fields = [
-        'task', 'id', 'args', 
-        'kwargs', 'retires', 'eta', 
-        'expires', 'queue', 'taskset', 
-        'chord', 'utc', 'callbacks', 
-        'errbacks', 'timeouts'
-    ];
+    var fields = ['args', 'callbacks', 'chord', 
+    'errbacks', 'eta', 'expires', 'id', 'kwargs', 
+    'queue', 'retries', 'task', 'taskset', 'timeouts', 'utc']
+
 
     var message = {
         task: task,
@@ -190,29 +187,19 @@ function Task(client, name, options) {
         return taskId;
     }
 
-    _this.link = options.link || null;
-    _this.linkError = options.linkError || null;
+    
     _this.notifier = options.notifier || null;
     _this.priority = options.priority || 6;
 
-    _this.errorCallback = null;
-    _this.linkCallback = null;
+    // _this.errorCallback = null;
+    // _this.linkCallback = null;
 
+    _this.children = [];
+    _this.childrenResults = {};
 
-    // if (_.isArray(_this.linkError)) {
-    //     _this.errorCallback = _.partial(async.series, _this.linkError, callback)
-    // } else
-    // if (_.isFunction(_this.linkError)) {
-    //     _this.errorCallback = _this.linkError;
-    // }
+    _this.links = options.link || [];
+    _this.linkErrors = options.linkError || [];
 
-
-    // if (_.isArray(_this.link)) {
-    //     _this.linkCallback = _.partial(async.series, _this.link, _this.errorCallback)
-    // } else
-    // if (_.isFunction(_this.link)) {
-    //     _this.linkCallback = _this.link;
-    // }
 
     var ret = {};
 
@@ -221,8 +208,8 @@ function Task(client, name, options) {
             options = {};
         }
 
-        taskId = prepare(options, _this);
-        return new Result(taskId, _this);
+        taskId = prepare(options, _this);    
+        return new Result(taskId, _this);        
     }
 
     ret.apply = function(options, callback) {
@@ -247,11 +234,80 @@ function Task(client, name, options) {
         ret.delayAsync(options, ms).then(callback).fail(callback);
     }
 
+    function linkEm(task, to) {
+        if (_.isArray(task)) {
+            task.forEach(function(t) {
+                to.push(t);
+            })
+        } else {
+            to.push(task);    
+        }
+
+        return ret;
+    }
+
+    ret.link = function(task) {
+        return linkEm(task, _this.links);
+    }
+
+    ret.linkError = function(task) {
+        return linkEm(task, _this.linkErrors);
+    }
+
     ret.times = function(options, n, callback) {
         async.times(n, function(n, next) {
             ret.apply(options, next);
         }, callback);
     }
+
+    ret.s = function(options) {
+        var options = _.extend({}, _this.options, options),
+            name = '' + _this.name;
+
+        return {
+            name: name,
+            options: options,
+            client: _this.client
+        }
+    }
+
+    ret.Canvas = function() {
+        var innerRet = {};
+
+        innerRet.chain = function(callback) {
+            var toExecute = _.extend([], _this.links);
+
+            if (toExecute.length == 0) {
+                ret.apply(_this.options, callback);
+            } else {
+                ret.apply(_this.options, 
+                    function(message) {        
+                        async.reduce(toExecute, message
+                        , function(pMessage, taskTemplate, cb) {
+                            // grab the arguments from the first/previous message
+                            var a = (_.isArray(pMessage.result)) ? pMessage.result : [JSON.parse(pMessage.result)];
+                            // grab the taskTemplate: name, options, client from <TASK>.s(OPTIONS)
+                            var t = taskTemplate;
+                            // concat the previous result with the options.args in the taskTemplate
+                            t.options.args = t.options.args.concat(a);
+                            // create a new task given the taskTemplate client, with supplied name and options
+                            var newTask = t.client.createTask(t.name, t.options);
+                            // because the options are fresh in the newTask, we can simply call .apply(CALLBACK)
+                            newTask.apply(function(m){
+                                cb(null, m)
+                            });
+                        }
+                        , function(err, message) {
+                            // the result will always be a message, failure or success -- so we only need one parameter
+                            callback(message);
+                        })
+                    }
+                );
+            }
+        }
+
+        return innerRet;
+    }()
 
     return ret;
 }
@@ -304,6 +360,7 @@ util.inherits(Client, events.EventEmitter);
 
 Client.prototype.createTask = function(name, options, callback) {
                                             debug('create a new Task ' + name);
+
     var _this = this,
         err = null,
         tempTask = null;
