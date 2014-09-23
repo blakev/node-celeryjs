@@ -168,6 +168,7 @@ function Task(client, name, options) {
             createMessage(              // Default Routing Key/Queue
                 _this.name,
                 _.extend(
+                    {},
                     _this.options, 
                     taskOptions
                 ),
