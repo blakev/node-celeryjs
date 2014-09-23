@@ -1,13 +1,17 @@
 Celery.js
 =============
-[![NPM Version](http://img.shields.io/badge/npm_version-0.0.3-green.svg)](https://www.npmjs.org/package/celeryjs)
 [![Downloads](http://img.shields.io/npm/dm/celeryjs.svg)](https://www.npmjs.org/package/celeryjs)
 [![License GPLv2](http://img.shields.io/badge/license-GPLv2-green.svg)](https://github.com/blakev/node-celeryjs/blob/master/LICENSE)
 [![Build Status](http://img.shields.io/travis/blakev/node-celeryjs.svg)](https://travis-ci.org/blakev/node-celeryjs)
+[![NPM Version](http://img.shields.io/npm/v/celeryjs.svg)](https://www.npmjs.org/package/celeryjs)
 
 A node.js Celery client utilizing callbacks and promises.
 
-Usage:
+Install:
+
+`npm install celeryjs`
+
+Use:
 ```javascript
 var celery = require('celeryjs');
 
