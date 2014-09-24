@@ -113,6 +113,72 @@ Execute the task with `ms` delay, returns a `Promise`.
 ####.delay([options,] ms, callback)
 Executes the task with `callback` using `ms` delay.
 
+####.mapAsync(arrayOfValues, [options,] [settle])
+Executes a given task in parallel, once for each of the values in arrayOfValues.
+
+arrayOfValues should contain elements of `array` that represent the mapped `args` to the celery function.
+
+`options` are task level options.
+
+`settle` (which can also be set in `options`) determines if all the executing task promises should fail individually or as a group. When `settle` is set to `true` the returned resultsArray will contain SUCCESS and FAILURE tasks. When it's set to `false` if any one task fails the whole promise fails and returns a FAILURE response.
+
+Example:
+```javascript
+var task = client.createTask('js.add'),
+    
+    values = [ [1,2], [3,4], [5,'a']];
+
+task.mapAsync(values, {settle: true}).then(successful).catch(errorous);
+```
+
+Returns:
+```javascript
+[ { state: 'fulfilled',
+    value: 
+     { status: 'SUCCESS',
+       traceback: null,
+       result: 3,
+       taskId: '8fd67bde-71b4-4572-b450-6844ff626b84',
+       children: [] } },
+  { state: 'fulfilled',
+    value: 
+     { status: 'SUCCESS',
+       traceback: null,
+       result: 7,
+       taskId: '8b1fc93f-985c-4aba-a99d-ba010b535ca6',
+       children: [] } },
+  { state: 'rejected',
+    reason: 
+     { status: 'FAILURE',
+       traceback: 'Traceback (most recent call last....',
+       result: [Object],
+       taskId: '4554ab51-84e3-4c71-99c6-c59d47a2f0c1',
+       children: [] } } ]
+```
+If `settle` were `false` on the 3rd response would be returned and all the tasks would be marked as FAILURE.
+
+####.map(arrayOfValues, [options,] [settle,] callback)
+
+Same as `.mapAsync` except it's handled with a `function(error, results)` callback.
+
+Example:
+```javascript
+var task = client.createTask('js.add'),
+
+    values = [ [1,2], [3,4], [5,'a']];
+
+task.map(values, {settle: false}, function(err, res) {
+    (err) ? errorous('doh!') : successful('yay!');
+})
+```
+
+Returns:
+```javascript
+error doh!
+```
+
+Setting `settle` to `true` returns `success yay!` with an array of possible SUCCESS and FAILURE tasks.
+
 ####.times([options,] n, callback)
 Executes the task `n` times with `callback`.
 
