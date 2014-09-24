@@ -28,7 +28,7 @@ function lowerFirst(string) {
 
 function toCamelCase(attrib) {
     var parts = attrib.split('_');
-    return lowerFirst(_.first(parts)) + _.map(_.rest(parts), upperFirst).join('');
+    return _.first(parts).toLowerCase() + _.map(_.rest(parts), function(x) { return upperFirst(x.toLowerCase()); }).join('');
 }
 
 function fixUnderscoreAttributes(message) {
@@ -174,7 +174,8 @@ function Task(client, name, options) {
                 ),
                 taskId
             ), 
-            _.extend({
+            _.extend(
+            {
                 'contentType': 'application/json',
                 'contentEncoding': 'utf-8',
             }, brokerOptions),
@@ -218,7 +219,7 @@ function Task(client, name, options) {
             callback = options;
             options = {};
         }
-        ret.applyAsync(options).then(callback).fail(callback);
+        ret.applyAsync(options).then(_.partial(callback, null)).catch(callback);
     }
 
     ret.delayAsync = function(options, ms) {
@@ -232,8 +233,49 @@ function Task(client, name, options) {
             ms = options;
             options = {};
         }
-        ret.delayAsync(options, ms).then(callback).fail(callback);
+        ret.delayAsync(options, ms).then(_.partial(callback, null)).catch(callback);
     }
+
+    ret.mapAsync = function(arrayOfValues, options, settle) {
+        if (_.isNull(options) || _.isUndefined(options)) {
+            options = {};
+        }
+        
+        var promises = _.map(arrayOfValues, function(taskArgs) {
+            var tempOptions = _.extend({}, options);
+                tempOptions.task = {args: taskArgs};
+
+            return ret.applyAsync(tempOptions);
+        })
+
+        if (settle === true || options.settle === true) {
+            return Q.allSettled(promises);
+        } else {
+            return Q.all(promises);
+        }
+    }
+
+    ret.map = function(arrayOfValues, options, settle, callback) {
+        if (_.isFunction(options)) {
+            callback = options;
+            options = {};
+            settle = false;
+        }
+
+        if (_.isFunction(settle)) {
+            callback = settle;
+        }
+
+        ret.mapAsync(arrayOfValues, options).then(_.partial(callback, null)).catch(callback);
+    }
+
+    // ret.starMap = function() {
+
+    // }
+
+    // ret.chunks = function() {
+
+    // }
 
     function linkEm(task, to) {
         if (_.isArray(task)) {
