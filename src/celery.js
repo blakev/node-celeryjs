@@ -6,9 +6,7 @@ var _ = require('underscore'),
     events = require('events'),
     amqp = require('amqp');
 
-
-var development = true;
-var debug = (process.env.NODE_CELERY_DEBUG || development) ? util.debug : function(){};
+var debug;
 
 function getMessageId() {
     return uuid.v4();
@@ -86,7 +84,9 @@ function Configuration(options) {
         }
     }
 
-    _this.debug = _this.debug || true;
+    _this.debug = (typeof _this.debug === 'undefined') ? true : _this.debug;
+          debug = (process.env.NODE_CELERY_DEBUG || _this.debug) ? util.debug : function(){};
+
     _this.camelCaseResults = _this.camelCaseResults || true;
 
 
@@ -458,7 +458,7 @@ Client.prototype.close = function(callback) { debug('disconnecting Client');
 
 
 
-exports.createClient = function(config, callback) { debug('creating Client');
+exports.createClient = function(config, callback) {
     if (arguments.length == 0) {
         config = {};
     } else
