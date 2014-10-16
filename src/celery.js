@@ -89,14 +89,14 @@ function Configuration(options) {
 
     _this.camelCaseResults = _this.camelCaseResults || true;
 
-
+    _this.AUTO_DELETE_QUEUE = typeof _this.AUTO_DELETE_QUEUE === 'undefined' ? true : _this.AUTO_DELETE_QUEUE;
     _this.BROKER_URL = _this.BROKER_URL || 'amqp://';
     _this.DEFAULT_EXCHANGE = _this.DEFAULT_EXCHANGE || '';
     _this.DEFAULT_EXCHANGE_TYPE = _this.DEFAULT_EXCHANGE_TYPE || 'topic';
     _this.DEFAULT_QUEUE = _this.DEFAULT_QUEUE || 'default';
     _this.DEFAULT_ROUTING_KEY = _this.DEFAULT_ROUTING_KEY || 'default';
     _this.RESULT_EXCHANGE = _this.RESULT_EXCHANGE || 'celeryresults';
-    _this.TASK_RESULT_DURABLE = _this.TASK_RESULT_DURABLE || true;
+    _this.TASK_RESULT_DURABLE = typeof _this.TASK_RESULT_DURABLE === 'undefined' ? false : _this.TASK_RESULT_DURABLE;
     _this.TASK_RESULT_EXPIRES = _this.TASK_RESULT_EXPIRES * 1000 || 30 * 60 * 1000; // 30 minutes
     _this.ROUTES = _this.ROUTES || {};
 }
@@ -115,13 +115,16 @@ function Result(id, task) {
             arguments: {
                 'x-expires': _this.client.conf.TASK_RESULT_EXPIRES
             },
-            durable: _this.client.conf.TASK_RESULT_DURABLE
+            durable: _this.client.conf.TASK_RESULT_DURABLE,
+            autoDelete: _this.client.conf.AUTO_DELETE_QUEUE
         },
         function(q) {
             var fixMessage = _this.client.conf.camelCaseResults ? fixUnderscoreAttributes : function(x){return x;};
+            var ctag;
 
             q.bind(_this.client.conf.RESULT_EXCHANGE, '#');
             q.subscribe(function (message, headers, deliveryInfo, messageObject) {
+
                 if (message.contentType === 'application/x-python-serialize') {
                     console.error('celery needs to be configured with json serializer');
                     process.exit(1);
@@ -131,13 +134,16 @@ function Result(id, task) {
 
                 if (message.status === 'SUCCESS') {
                     _this.promise.resolve(fixMessage(message));
+                    return;
                 } else
                 if (message.status === 'FAILURE') {
                     _this.promise.reject(fixMessage(message));
+                    return;
                 } else {
                     _this.promise.notify(fixMessage(message));
                 }
-            })
+            }).addCallback(function(ok){ q.unbind(_this.client.conf.RESULT_EXCHANGE, '#'); });
+
         }
     )
 
