@@ -93,6 +93,8 @@ function Configuration(options) {
     _this.BROKER_URL = _this.BROKER_URL || 'amqp://';
     _this.DEFAULT_EXCHANGE = _this.DEFAULT_EXCHANGE || '';
     _this.DEFAULT_EXCHANGE_TYPE = _this.DEFAULT_EXCHANGE_TYPE || 'topic';
+    _this.DEFAULT_EXCHANGE_DURABLE = typeof _this.DEFAULT_EXCHANGE_DURABLE === 'undefined' ? false : _this.DEFAULT_EXCHANGE_DURABLE;
+    _this.DEFAULT_EXCHANGE_AUTO_DELETE = typeof _this.DEFAULT_EXCHANGE_AUTO_DELETE === 'undefined' ? true : _this.DEFAULT_EXCHANGE_AUTO_DELETE;
     _this.DEFAULT_QUEUE = _this.DEFAULT_QUEUE || 'default';
     _this.DEFAULT_ROUTING_KEY = _this.DEFAULT_ROUTING_KEY || 'default';
     _this.RESULT_EXCHANGE = _this.RESULT_EXCHANGE || 'celeryresults';
@@ -108,7 +110,6 @@ function Result(id, task) {
         _this.result = null;
 
     _this.promise = Q.defer();
-
     _this.client.backend.queue(
         _this.taskId.replace(/-/g, ''),
         {
@@ -166,7 +167,7 @@ function Task(client, name, options) {
 
         var taskId = getMessageId();
 
-        _this.client.broker.publish(
+        _this.client.exchange.publish(
             _this.options.queue         // Task Created options.queue
             || queue                    // Task NAME in DefaultRoutes.queue
             || options.queue            // Task Called options.queue
@@ -387,16 +388,21 @@ function Client(conf, callback) {
     })
 
     _this.backend = _this.broker;
-
     _this.broker.on('ready', function() {       debug('connected to broker');
         _this.connection.broker = true;
         _this.connection.ready = true;
-    
-        if(!_.isUndefined(callback)) {
-            return callback(null, _this);   
-        } else {
-            _this.emit('connect');
-        }
+        _this.exchange = _this.broker.exchange(
+            _this.conf.DEFAULT_EXCHANGE, {
+                type: _this.conf.DEFAULT_EXCHANGE_TYPE,
+                durable: _this.conf.DEFAULT_EXCHANGE_DURABLE,
+                autoDelete: _this.conf.DEFAULT_EXCHANGE_AUTO_DELETE
+            }, function () {
+                if(!_.isUndefined(callback)) {
+                    return callback(null, _this);
+                } else {
+                    _this.emit('connect');
+                }
+            });
     });
 
     _this.broker.on('error', function(e) { _this.emit('error', e); })
